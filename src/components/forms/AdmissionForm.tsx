@@ -53,8 +53,8 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
     guardian_relationship: "Father",
     emergency_contact: "",
 
-    // Step 3: Academic
-    current_class: "HSC 1st Year (Class 11)",
+    // Step 1 & 3: Academic
+    current_class: "Class 11",
     previous_school: "",
     academic_group: "Science",
     selected_course_id: initialCourseId || db.courses[0]?.id || "",
@@ -399,6 +399,43 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Class (শ্রেণি - ৬ষ্ঠ থেকে ১২শ) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="current_class"
+                  value={formData.current_class}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white font-medium text-navy-900"
+                >
+                  <option value="Class 6">Class 6 (ষষ্ঠ শ্রেণি)</option>
+                  <option value="Class 7">Class 7 (সপ্তম শ্রেণি)</option>
+                  <option value="Class 8">Class 8 (অষ্টম শ্রেণি)</option>
+                  <option value="Class 9">Class 9 (নবম শ্রেণি - SSC)</option>
+                  <option value="Class 10">Class 10 (দশম শ্রেণি - SSC পরীক্ষার্থী)</option>
+                  <option value="Class 11">Class 11 (একাদশ শ্রেণি - HSC ১ম বর্ষ)</option>
+                  <option value="Class 12">Class 12 (দ্বাদশ শ্রেণি - HSC ২য় বর্ষ)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Academic Group (বিভাগ / গ্রুপ) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="academic_group"
+                  value={formData.academic_group}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white font-medium text-navy-900"
+                >
+                  <option value="Science">Science (বিজ্ঞান বিভাগ)</option>
+                  <option value="Business Studies">Business Studies (ব্যবসায় শিক্ষা)</option>
+                  <option value="Humanities">Humanities (মানবিক বিভাগ)</option>
+                  <option value="General">General / All Subjects (সাধারণ - শ্রেণি ৬-৮)</option>
+                </select>
+              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Present Address <span className="text-red-500">*</span>
@@ -542,13 +579,16 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                   name="current_class"
                   value={formData.current_class}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white font-medium text-navy-900"
                 >
-                  <option value="Class 9 (SSC)">Class 9 (SSC)</option>
-                  <option value="Class 10 (SSC Candidate)">Class 10 (SSC Candidate)</option>
-                  <option value="HSC 1st Year (Class 11)">HSC 1st Year (Class 11)</option>
-                  <option value="HSC 2nd Year (Class 12)">HSC 2nd Year (Class 12)</option>
-                  <option value="HSC Passed (Admission Seeker)">HSC Passed (Admission Seeker)</option>
+                  <option value="Class 6">Class 6 (ষষ্ঠ শ্রেণি)</option>
+                  <option value="Class 7">Class 7 (সপ্তম শ্রেণি)</option>
+                  <option value="Class 8">Class 8 (অষ্টম শ্রেণি)</option>
+                  <option value="Class 9">Class 9 (নবম শ্রেণি - SSC)</option>
+                  <option value="Class 10">Class 10 (দশম শ্রেণি - SSC পরীক্ষার্থী)</option>
+                  <option value="Class 11">Class 11 (একাদশ শ্রেণি - HSC ১ম বর্ষ)</option>
+                  <option value="Class 12">Class 12 (দ্বাদশ শ্রেণি - HSC ২য় বর্ষ)</option>
+                  <option value="HSC Passed">HSC Passed (বিশ্ববিদ্যালয় / মেডিকেল ভর্তি পরীক্ষার্থী)</option>
                 </select>
               </div>
 
@@ -560,11 +600,12 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                   name="academic_group"
                   value={formData.academic_group}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white font-medium text-navy-900"
                 >
-                  <option value="Science">Science (বিজ্ঞান)</option>
+                  <option value="Science">Science (বিজ্ঞান বিভাগ)</option>
                   <option value="Business Studies">Business Studies (ব্যবসায় শিক্ষা)</option>
-                  <option value="Humanities">Humanities (মানবিক)</option>
+                  <option value="Humanities">Humanities (মানবিক বিভাগ)</option>
+                  <option value="General">General / All Subjects (সাধারণ - শ্রেণি ৬-৮)</option>
                 </select>
               </div>
 
