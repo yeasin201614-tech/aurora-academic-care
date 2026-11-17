@@ -28,7 +28,7 @@ export const DEMO_ACCOUNTS: Record<UserRole, DemoUserAccount> = {
   },
   teacher: {
     id: "prof-tch-01",
-    email: "physics.lead@auroraacademic.com",
+    email: "teacher@auroraacademic.com",
     role: "teacher",
     name: "Engr. Tanvir Ahmed",
     banglaName: "প্রকৌ. তানভীর আহমেদ",

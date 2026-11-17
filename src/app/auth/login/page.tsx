@@ -187,6 +187,80 @@ export default function LoginPage() {
             </Link>
           </div>
         </div>
+
+        {/* Quick Demo Credentials Helper */}
+        <div className="mt-6 bg-white/90 backdrop-blur border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm text-xs">
+          <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-bold text-navy-900">ডিমো একাউন্টসমূহ (১-ক্লিক লগইন):</span>
+            </div>
+            <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-semibold">
+              Password: Aurora@2026
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            <button
+              type="button"
+              onClick={() => { handleRoleSelect("super_admin"); setPassword("Aurora@2026"); }}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-gold-50/50 border border-slate-200 hover:border-gold-400 text-left transition-all group"
+            >
+              <div className="font-bold text-navy-900 group-hover:text-gold-700 flex items-center justify-between">
+                <span>🛡️ Super Admin</span>
+                <span className="text-[9px] text-slate-400 font-normal">Click to fill</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono truncate">superadmin@auroraacademic.com</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { handleRoleSelect("admin"); setPassword("Aurora@2026"); }}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50/50 border border-slate-200 hover:border-brandBlue-400 text-left transition-all group"
+            >
+              <div className="font-bold text-navy-900 group-hover:text-brandBlue-700 flex items-center justify-between">
+                <span>👔 Admin</span>
+                <span className="text-[9px] text-slate-400 font-normal">Click to fill</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono truncate">admin@auroraacademic.com</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { handleRoleSelect("teacher"); setPassword("Aurora@2026"); }}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-400 text-left transition-all group"
+            >
+              <div className="font-bold text-navy-900 group-hover:text-emerald-700 flex items-center justify-between">
+                <span>👨‍🏫 Teacher</span>
+                <span className="text-[9px] text-slate-400 font-normal">Click to fill</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono truncate">teacher@auroraacademic.com</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { handleRoleSelect("student"); setPassword("Aurora@2026"); }}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200 hover:border-indigo-400 text-left transition-all group"
+            >
+              <div className="font-bold text-navy-900 group-hover:text-indigo-700 flex items-center justify-between">
+                <span>🎓 Student</span>
+                <span className="text-[9px] text-slate-400 font-normal">Click to fill</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono truncate">student@auroraacademic.com</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { handleRoleSelect("parent"); setPassword("Aurora@2026"); }}
+              className="sm:col-span-2 p-2.5 rounded-xl bg-slate-50 hover:bg-amber-50/50 border border-slate-200 hover:border-amber-400 text-left transition-all group"
+            >
+              <div className="font-bold text-navy-900 group-hover:text-amber-700 flex items-center justify-between">
+                <span>👨‍👩‍👧 Guardian / Parent</span>
+                <span className="text-[9px] text-slate-400 font-normal">Click to fill</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono truncate">parent@auroraacademic.com</div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
