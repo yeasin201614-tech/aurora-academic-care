@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
 
     const student = db.students.find((s) => s.id === studentId || s.id === invoice.student_id);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
     const initResult = await sslcommerz.initPayment({
       invoiceId: invoice.id,
