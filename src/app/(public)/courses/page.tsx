@@ -14,12 +14,39 @@ export default function CoursesPage() {
 
   const allCourses = db.courses;
 
-  const categories = ["All", "HSC", "Admission", "SSC"];
+  const categories = [
+    "All",
+    "Class 6",
+    "Class 7",
+    "Class 8",
+    "Class 9",
+    "Class 10",
+    "SSC",
+    "HSC",
+    "Admission",
+  ];
   const modes = ["All", "offline", "online", "hybrid"];
 
   const filteredCourses = allCourses.filter((course) => {
-    const matchesCategory =
-      selectedCategory === "All" || course.category.toLowerCase() === selectedCategory.toLowerCase();
+    let matchesCategory = false;
+    if (selectedCategory === "All") {
+      matchesCategory = true;
+    } else if (selectedCategory === "SSC") {
+      matchesCategory =
+        course.category.toLowerCase() === "ssc" ||
+        course.class_level.toLowerCase().includes("class 9") ||
+        course.class_level.toLowerCase().includes("class 10");
+    } else if (selectedCategory === "HSC") {
+      matchesCategory =
+        course.category.toLowerCase() === "hsc" ||
+        course.class_level.toLowerCase().includes("class 11") ||
+        course.class_level.toLowerCase().includes("class 12");
+    } else {
+      matchesCategory =
+        course.category.toLowerCase() === selectedCategory.toLowerCase() ||
+        course.class_level.toLowerCase().includes(selectedCategory.toLowerCase());
+    }
+
     const matchesMode =
       selectedMode === "All" || course.learning_mode.toLowerCase() === selectedMode.toLowerCase();
     const matchesSearch =
