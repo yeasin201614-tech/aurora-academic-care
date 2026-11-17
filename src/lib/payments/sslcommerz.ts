@@ -67,7 +67,7 @@ export class SSLCommerzService {
 
     try {
       // If running in development mock mode without active external sandbox credentials:
-      if (!process.env.SSLCOMMERZ_STORE_ID) {
+      if (!process.env.SSLCOMMERZ_STORE_ID || process.env.SSLCOMMERZ_STORE_ID === "aurora_sandbox") {
         const mockTranId = `AAC-TXN-${Date.now()}`;
         return {
           status: "SUCCESS",
@@ -101,7 +101,7 @@ export class SSLCommerzService {
     if (!val_id) return { isValid: false, data: null };
 
     // In dev mock sandbox:
-    if (val_id.startsWith("VAL-MOCK-") || !process.env.SSLCOMMERZ_STORE_ID) {
+    if (val_id.startsWith("VAL-MOCK-") || !process.env.SSLCOMMERZ_STORE_ID || process.env.SSLCOMMERZ_STORE_ID === "aurora_sandbox") {
       return {
         isValid: true,
         data: {
