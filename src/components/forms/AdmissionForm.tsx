@@ -19,7 +19,10 @@ import {
   ArrowRight,
   ArrowLeft,
   Printer,
-  Sparkles
+  Sparkles,
+  Lock,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 interface AdmissionFormProps {
@@ -33,6 +36,8 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submittedApplication, setSubmittedApplication] = useState<AdmissionApplication | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -41,6 +46,8 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
     student_name_bn: "",
     phone: "",
     email: "",
+    password: "",
+    confirm_password: "",
     date_of_birth: "",
     gender: "Male",
     present_address: "",
@@ -93,6 +100,12 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
       }
       if (!formData.date_of_birth) {
         errors.date_of_birth = "Date of birth is required";
+      }
+      if (!formData.password || formData.password.length < 6) {
+        errors.password = "পাসওয়ার্ড দিন (কমপক্ষে ৬ অক্ষর / At least 6 characters)";
+      }
+      if (formData.password !== formData.confirm_password) {
+        errors.confirm_password = "পাসওয়ার্ড দুটি মিলছে না (Passwords do not match)";
       }
       if (!formData.present_address.trim()) {
         errors.present_address = "Present address is required";
@@ -436,6 +449,60 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Account Password (পাসওয়ার্ড সেট করুন) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন"
+                    className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {formErrors.password && <p className="text-xs text-red-500 mt-1">{formErrors.password}</p>}
+                <p className="text-[10px] text-slate-400 mt-1">ভর্তির পর স্টুডেন্ট পোর্টালে লগইন করতে ব্যবহৃত হবে</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Confirm Password (পাসওয়ার্ড নিশ্চিত করুন) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirm_password"
+                    value={formData.confirm_password}
+                    onChange={handleChange}
+                    placeholder="একই পাসওয়ার্ড পুনরায় লিখুন"
+                    className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    aria-label="Toggle confirm password visibility"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {formErrors.confirm_password && <p className="text-xs text-red-500 mt-1">{formErrors.confirm_password}</p>}
+                <p className="text-[10px] text-slate-400 mt-1">উভয় পাসওয়ার্ড একই হতে হবে</p>
+              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Present Address <span className="text-red-500">*</span>
@@ -717,6 +784,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                 <p><strong className="text-slate-500">DOB:</strong> {formData.date_of_birth}</p>
                 <p><strong className="text-slate-500">Gender:</strong> {formData.gender}</p>
                 <p><strong className="text-slate-500">Address:</strong> {formData.present_address}</p>
+                <p><strong className="text-slate-500">Portal Password:</strong> •••••••• (Secured)</p>
               </div>
 
               <div className="space-y-1.5">

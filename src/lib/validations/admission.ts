@@ -12,6 +12,8 @@ export const admissionSchema = z.object({
   gender: z.enum(["Male", "Female", "Other"]),
   present_address: z.string().min(5, "Present address is required"),
   permanent_address: z.string().min(5, "Permanent address is required"),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  confirm_password: z.string().optional(),
 
   // Guardian Information
   guardian_name: z.string().min(3, "Guardian name is required"),
