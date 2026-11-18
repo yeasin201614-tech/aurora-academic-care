@@ -18,7 +18,8 @@ import {
   PhoneCall,
   Calendar,
   Building,
-  CreditCard
+  CreditCard,
+  Loader2
 } from "lucide-react";
 
 function AdmissionStatusContent() {
@@ -28,19 +29,44 @@ function AdmissionStatusContent() {
   const [searchQuery, setSearchQuery] = useState(initialRef);
   const [application, setApplication] = useState<AdmissionApplication | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const performSearch = (ref: string) => {
-    if (!ref.trim()) return;
+  const performSearch = async (queryStr: string) => {
+    const q = queryStr.trim();
+    if (!q) return;
+
     setHasSearched(true);
     setErrorMessage("");
+    setIsSearching(true);
 
-    const found = db.getApplicationByRef(ref);
-    if (found) {
-      setApplication(found);
-    } else {
-      setApplication(null);
-      setErrorMessage("No admission application found matching this reference number or mobile number.");
+    try {
+      const res = await fetch(`/api/admission/status?ref=${encodeURIComponent(q)}`);
+      const data = await res.json();
+
+      if (data.success && data.application) {
+        setApplication(data.application);
+      } else {
+        // Fallback to local mock db
+        const local = db.getApplicationByRef(q);
+        if (local) {
+          setApplication(local);
+        } else {
+          setApplication(null);
+          setErrorMessage(data.error || "No admission application found matching this reference number or mobile number.");
+        }
+      }
+    } catch (err) {
+      console.warn("Status fetch exception, trying local fallback:", err);
+      const local = db.getApplicationByRef(q);
+      if (local) {
+        setApplication(local);
+      } else {
+        setApplication(null);
+        setErrorMessage("No admission application found matching this reference number or mobile number.");
+      }
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -91,8 +117,15 @@ function AdmissionStatusContent() {
     }
   };
 
-  const course = application ? db.courses.find((c) => c.id === application.selected_course_id) : null;
-  const batch = application ? db.batches.find((b) => b.id === application.selected_batch_id) : null;
+  const course =
+    (application as any)?.course ||
+    (application as any)?.courses ||
+    db.courses.find((c) => c.id === application?.selected_course_id);
+
+  const batch =
+    (application as any)?.batch ||
+    (application as any)?.batches ||
+    db.batches.find((b) => b.id === application?.selected_batch_id);
 
   return (
     <div className="space-y-12 py-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -117,7 +150,7 @@ function AdmissionStatusContent() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="e.g. AAC-2026-ADM1001 or 01811223344"
+              placeholder="e.g. AAC-2026-ADM2512 or 01834201614"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brandBlue-500 font-mono"
@@ -125,16 +158,35 @@ function AdmissionStatusContent() {
           </div>
           <button
             type="submit"
-            className="px-6 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+            disabled={isSearching}
+            className="px-6 py-2.5 bg-navy-800 hover:bg-navy-900 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
           >
-            <span>Track</span>
-            <ArrowRight className="w-3.5 h-3.5 text-gold-400" />
+            {isSearching ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-gold-400" />
+                <span>Searching...</span>
+              </>
+            ) : (
+              <>
+                <span>Track</span>
+                <ArrowRight className="w-3.5 h-3.5 text-gold-400" />
+              </>
+            )}
           </button>
         </form>
 
         {/* Demo Quick Links */}
         <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-          <span>Try Demo IDs:</span>
+          <span>Recent Demo IDs:</span>
+          <button
+            onClick={() => {
+              setSearchQuery("01834201614");
+              performSearch("01834201614");
+            }}
+            className="text-brandBlue-600 font-mono hover:underline bg-blue-50 px-1.5 py-0.5 rounded font-bold"
+          >
+            01834201614 (yeasin Arafat)
+          </button>
           <button
             onClick={() => {
               setSearchQuery("AAC-2026-ADM1001");
@@ -153,15 +205,6 @@ function AdmissionStatusContent() {
           >
             AAC-2026-ADM1002 (Approved)
           </button>
-          <button
-            onClick={() => {
-              setSearchQuery("AAC-2026-ADM1003");
-              performSearch("AAC-2026-ADM1003");
-            }}
-            className="text-brandBlue-600 font-mono hover:underline bg-blue-50 px-1.5 py-0.5 rounded"
-          >
-            AAC-2026-ADM1003 (Pending)
-          </button>
         </div>
       </div>
 
@@ -175,7 +218,7 @@ function AdmissionStatusContent() {
 
       {/* Result Card: Printable Official Admission Slip */}
       {application && (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-8 sm:p-10 space-y-8 printable-card">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-card p-8 sm:p-10 space-y-8 printable-card animate-fadeIn">
           {/* Printable Header */}
           <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b border-slate-200 gap-4">
             <div className="flex items-center gap-3">
@@ -188,7 +231,7 @@ function AdmissionStatusContent() {
               />
               <div className="border-l border-slate-200 pl-3">
                 <h3 className="font-bold text-navy-900 text-sm">AURORA ACADEMIC CARE</h3>
-                <p className="text-[10px] text-slate-500">Official Admission Registry • Dhaka, Bangladesh</p>
+                <p className="text-[10px] text-slate-500">Official Admission Registry • Chittagong / Dhaka, Bangladesh</p>
               </div>
             </div>
 
@@ -215,7 +258,7 @@ function AdmissionStatusContent() {
                 {application.application_reference}
               </span>
               <span className="text-[10px] text-slate-500 block mt-0.5">
-                Submitted: {new Date(application.created_at).toLocaleDateString()}
+                Submitted: {new Date(application.created_at || Date.now()).toLocaleDateString()}
               </span>
             </div>
 
@@ -239,7 +282,7 @@ function AdmissionStatusContent() {
               </span>
               <span className="text-base font-mono font-bold text-brandBlue-600 block">
                 {application.assigned_student_id
-                  ? "AAC-2026-STU001"
+                  ? application.assigned_student_id
                   : application.status === "approved"
                   ? "Pending Final Enrollment"
                   : "Assigned upon Approval"}
@@ -251,11 +294,11 @@ function AdmissionStatusContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700">
             <div className="space-y-3">
               <h4 className="font-bold text-navy-900 text-sm border-b border-slate-100 pb-1.5">
-                Academic & Batch Enrollment
+                Academic & Program Enrollment
               </h4>
               <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-400">Selected Course:</span>
-                <span className="font-semibold text-slate-800">{course?.title_en || "HSC Complete Care"}</span>
+                <span className="text-slate-400">Selected Program:</span>
+                <span className="font-semibold text-slate-800">{course?.title_en || "Academic Care"}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-400">Class Level & Group:</span>
@@ -263,7 +306,7 @@ function AdmissionStatusContent() {
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-400">Assigned Batch:</span>
-                <span className="font-semibold text-slate-800">{batch?.name || "Morning Titans (Batch A)"}</span>
+                <span className="font-semibold text-slate-800">{batch?.name || "Campus Care Batch"}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-400">Learning Mode:</span>
@@ -297,7 +340,7 @@ function AdmissionStatusContent() {
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-slate-400">Emergency Contact:</span>
-                <span className="font-semibold text-slate-800">{application.emergency_contact}</span>
+                <span className="font-semibold text-slate-800">{application.emergency_contact || application.guardian_phone}</span>
               </div>
             </div>
           </div>
