@@ -16,28 +16,30 @@ export async function GET(req: NextRequest) {
   // 1. Primary: Search in Supabase Cloud PostgreSQL Database
   try {
     const supabase = getAdminClient();
-    let queryBuilder = supabase
-      .from("admission_applications")
-      .select("*, courses(*), batches(*)");
+    if (supabase) {
+      let queryBuilder = supabase
+        .from("admission_applications")
+        .select("*, courses(*), batches(*)");
 
-    if (query.toUpperCase().startsWith("AAC-") || query.toUpperCase().includes("ADM")) {
-      queryBuilder = queryBuilder.ilike("application_reference", query.trim());
-    } else {
-      queryBuilder = queryBuilder.eq("phone", query.trim());
-    }
+      if (query.toUpperCase().startsWith("AAC-") || query.toUpperCase().includes("ADM")) {
+        queryBuilder = queryBuilder.ilike("application_reference", query.trim());
+      } else {
+        queryBuilder = queryBuilder.eq("phone", query.trim());
+      }
 
-    const { data: cloudApp, error: dbError } = await queryBuilder.maybeSingle();
+      const { data: cloudApp, error: dbError } = await queryBuilder.maybeSingle();
 
-    if (!dbError && cloudApp) {
-      return NextResponse.json({
-        success: true,
-        source: "supabase_cloud",
-        application: {
-          ...cloudApp,
-          course: cloudApp.courses || db.courses.find((c) => c.id === cloudApp.selected_course_id),
-          batch: cloudApp.batches || db.batches.find((b) => b.id === cloudApp.selected_batch_id),
-        },
-      });
+      if (!dbError && cloudApp) {
+        return NextResponse.json({
+          success: true,
+          source: "supabase_cloud",
+          application: {
+            ...cloudApp,
+            course: cloudApp.courses || db.courses.find((c) => c.id === cloudApp.selected_course_id),
+            batch: cloudApp.batches || db.batches.find((b) => b.id === cloudApp.selected_batch_id),
+          },
+        });
+      }
     }
   } catch (err) {
     console.warn("Supabase Cloud status lookup warning:", err);

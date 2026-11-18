@@ -9,12 +9,21 @@ export function getAdminClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     "";
 
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  if (!serviceRoleKey) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  } catch (err) {
+    console.warn("Failed to initialize Supabase admin client:", err);
+    return null;
+  }
 }
 
 export function getPublicClient() {
@@ -23,7 +32,16 @@ export function getPublicClient() {
     "https://iussuvbntpahbydsyzqy.supabase.co";
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-  return createClient(supabaseUrl, anonKey);
+  if (!anonKey) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, anonKey);
+  } catch (err) {
+    console.warn("Failed to initialize Supabase public client:", err);
+    return null;
+  }
 }
 
 // Map string IDs to Supabase UUIDs

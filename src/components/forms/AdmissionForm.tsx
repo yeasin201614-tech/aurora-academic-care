@@ -22,12 +22,25 @@ import {
   Sparkles,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Check
 } from "lucide-react";
 
 interface AdmissionFormProps {
   initialCourseId?: string;
   initialBatchId?: string;
+}
+
+function getDefaultCourseForClass(clsName: string): { courseId: string; academicGroup?: string } {
+  const cls = (clsName || "").toLowerCase();
+  if (cls.includes("6")) return { courseId: "crs-cls6-fnd-05", academicGroup: "General" };
+  if (cls.includes("7")) return { courseId: "crs-cls7-fnd-06", academicGroup: "General" };
+  if (cls.includes("8")) return { courseId: "crs-cls8-fnd-07", academicGroup: "General" };
+  if (cls.includes("9")) return { courseId: "crs-cls9-ssc-08", academicGroup: "Science" };
+  if (cls.includes("10")) return { courseId: "crs-cls10-ssc-09", academicGroup: "Science" };
+  if (cls.includes("11") || cls.includes("12")) return { courseId: "crs-hsc-sci-01", academicGroup: "Science" };
+  if (cls.includes("passed")) return { courseId: "crs-med-adm-02", academicGroup: "Science" };
+  return { courseId: "crs-hsc-sci-01" };
 }
 
 export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionFormProps) {
@@ -38,6 +51,10 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+
+  // Auto-sync toggles
+  const [sameAddressAsPresent, setSameAddressAsPresent] = useState<boolean>(true);
+  const [sameEmergencyAsGuardian, setSameEmergencyAsGuardian] = useState<boolean>(true);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -61,12 +78,12 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
     emergency_contact: "",
 
     // Step 1 & 3: Academic
-    current_class: "Class 11",
+    current_class: "Class 9",
     previous_school: "",
     academic_group: "Science",
-    selected_course_id: initialCourseId || db.courses[0]?.id || "",
-    selected_batch_id: initialBatchId || db.batches[0]?.id || "",
-    learning_mode: "hybrid",
+    selected_course_id: initialCourseId || "crs-cls9-ssc-08",
+    selected_batch_id: initialBatchId || "bat-cls9-01",
+    learning_mode: "offline",
     additional_notes: "",
   });
 
@@ -77,7 +94,42 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    if (name === "current_class") {
+      const match = getDefaultCourseForClass(value);
+      const matchingBatches = db.batches.filter((b) => b.course_id === match.courseId);
+      setFormData((prev) => ({
+        ...prev,
+        current_class: value,
+        selected_course_id: match.courseId,
+        selected_batch_id: matchingBatches[0]?.id || "",
+        ...(match.academicGroup && (value.includes("6") || value.includes("7") || value.includes("8"))
+          ? { academic_group: match.academicGroup }
+          : {}),
+      }));
+      return;
+    }
+
+    if (name === "present_address" && sameAddressAsPresent) {
+      setFormData((prev) => ({
+        ...prev,
+        present_address: value,
+        permanent_address: value,
+      }));
+      return;
+    }
+
+    if (name === "guardian_phone" && sameEmergencyAsGuardian) {
+      setFormData((prev) => ({
+        ...prev,
+        guardian_phone: value,
+        emergency_contact: value,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
+
     // Clear error
     if (formErrors[name]) {
       setFormErrors((prev) => {
@@ -101,17 +153,18 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
       if (!formData.date_of_birth) {
         errors.date_of_birth = "Date of birth is required";
       }
-      if (!formData.password || formData.password.length < 6) {
+      if (formData.password && formData.password.length < 6) {
         errors.password = "পাসওয়ার্ড দিন (কমপক্ষে ৬ অক্ষর / At least 6 characters)";
       }
-      if (formData.password !== formData.confirm_password) {
+      if (formData.password && formData.confirm_password && formData.password !== formData.confirm_password) {
         errors.confirm_password = "পাসওয়ার্ড দুটি মিলছে না (Passwords do not match)";
       }
-      if (!formData.present_address.trim()) {
+      if (!formData.present_address.trim() || formData.present_address.trim().length < 2) {
         errors.present_address = "Present address is required";
       }
-      if (!formData.permanent_address.trim()) {
-        errors.permanent_address = "Permanent address is required";
+      // Auto fill permanent address if empty
+      if (!formData.permanent_address.trim() || sameAddressAsPresent) {
+        formData.permanent_address = formData.present_address.trim();
       }
     }
 
@@ -122,8 +175,9 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
       if (!formData.guardian_phone.trim() || !/^(?:\+8801|8801|01)[3-9]\d{8}$/.test(formData.guardian_phone)) {
         errors.guardian_phone = "Valid Bangladeshi mobile number required for guardian";
       }
-      if (!formData.emergency_contact.trim()) {
-        errors.emergency_contact = "Emergency contact is required";
+      // Auto fill emergency contact if empty
+      if (!formData.emergency_contact.trim() || sameEmergencyAsGuardian) {
+        formData.emergency_contact = formData.guardian_phone.trim();
       }
     }
 
@@ -132,7 +186,8 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
         errors.previous_school = "Previous school/college name is required";
       }
       if (!formData.selected_course_id) {
-        errors.selected_course_id = "Please select a course";
+        const match = getDefaultCourseForClass(formData.current_class);
+        formData.selected_course_id = match.courseId;
       }
     }
 
@@ -153,45 +208,86 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) return;
+
+    if (!validateStep(1)) {
+      setStep(1);
+      window.scrollTo({ top: 300, behavior: "smooth" });
+      return;
+    }
+    if (!validateStep(2)) {
+      setStep(2);
+      window.scrollTo({ top: 300, behavior: "smooth" });
+      return;
+    }
+    if (!validateStep(3)) {
+      setStep(3);
+      window.scrollTo({ top: 300, behavior: "smooth" });
+      return;
+    }
+
+    // Prepare resilient payload
+    const presentAddr = formData.present_address.trim();
+    const permAddr = (formData.permanent_address || "").trim();
+    const finalPermAddr = permAddr.length >= 3 && permAddr.toLowerCase() !== "same" ? permAddr : presentAddr;
+
+    const guardPhone = formData.guardian_phone.trim();
+    const emerg = (formData.emergency_contact || "").trim();
+    const finalEmerg = emerg.length >= 6 && emerg.toLowerCase() !== "same" ? emerg : guardPhone;
+
+    const resolvedCourse = formData.selected_course_id || getDefaultCourseForClass(formData.current_class).courseId;
+
+    const finalPayload = {
+      ...formData,
+      present_address: presentAddr,
+      permanent_address: finalPermAddr,
+      emergency_contact: finalEmerg,
+      selected_course_id: resolvedCourse,
+      password: formData.password || `Aurora@${formData.phone.slice(-4)}`,
+    };
 
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/admission/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(finalPayload),
       });
 
       const data = await response.json();
       if (data.success && data.application) {
         setSubmittedApplication(data.application);
       } else {
-        alert(data.error || "Submission failed. Please check form fields.");
+        const errorDetails = data.errors
+          ? Object.entries(data.errors)
+              .map(([field, msgs]: any) => `• ${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+              .join("\n")
+          : "";
+        const alertMsg = (data.error ? `${data.error}\n\n` : "Submission note:\n") + (errorDetails || "Please check form fields.");
+        alert(alertMsg);
       }
     } catch (err) {
       console.error("Submission error:", err);
       // Fallback direct mock DB insert
       const app = db.addApplication({
-        student_name: formData.student_name,
-        student_name_bn: formData.student_name_bn,
-        phone: formData.phone,
-        email: formData.email,
-        date_of_birth: formData.date_of_birth,
-        gender: formData.gender,
-        present_address: formData.present_address,
-        permanent_address: formData.permanent_address,
-        current_class: formData.current_class,
-        previous_school: formData.previous_school,
-        academic_group: formData.academic_group,
-        selected_course_id: formData.selected_course_id,
-        selected_batch_id: formData.selected_batch_id,
-        learning_mode: formData.learning_mode as any,
-        guardian_name: formData.guardian_name,
-        guardian_phone: formData.guardian_phone,
-        guardian_email: formData.guardian_email,
-        guardian_relationship: formData.guardian_relationship,
-        emergency_contact: formData.emergency_contact,
+        student_name: finalPayload.student_name,
+        student_name_bn: finalPayload.student_name_bn,
+        phone: finalPayload.phone,
+        email: finalPayload.email,
+        date_of_birth: finalPayload.date_of_birth,
+        gender: finalPayload.gender,
+        present_address: finalPayload.present_address,
+        permanent_address: finalPayload.permanent_address,
+        current_class: finalPayload.current_class,
+        previous_school: finalPayload.previous_school,
+        academic_group: finalPayload.academic_group,
+        selected_course_id: finalPayload.selected_course_id,
+        selected_batch_id: finalPayload.selected_batch_id,
+        learning_mode: finalPayload.learning_mode as any,
+        guardian_name: finalPayload.guardian_name,
+        guardian_phone: finalPayload.guardian_phone,
+        guardian_email: finalPayload.guardian_email,
+        guardian_relationship: finalPayload.guardian_relationship,
+        emergency_contact: finalPayload.emergency_contact,
         review_notes: "Application received and queued for administrative review.",
       });
       setSubmittedApplication(app);
@@ -247,8 +343,12 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
             <span className="font-semibold text-slate-800">{submittedApplication.phone}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-slate-200">
-            <span className="text-slate-500">Selected Program:</span>
-            <span className="font-semibold text-slate-800">{selectedCourse?.title_en || "General Care"}</span>
+            <span className="text-slate-500">Selected Class:</span>
+            <span className="font-semibold text-slate-800">{submittedApplication.current_class} ({submittedApplication.academic_group})</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-slate-200">
+            <span className="text-slate-500">Program:</span>
+            <span className="font-semibold text-slate-800">{selectedCourse?.title_en || "Academic Care"}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-slate-200">
             <span className="text-slate-500">Learning Mode:</span>
@@ -256,7 +356,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
           </div>
           <div className="flex justify-between py-1">
             <span className="text-slate-500">Submission Timestamp:</span>
-            <span className="text-slate-700">{new Date(submittedApplication.created_at).toLocaleString()}</span>
+            <span className="text-slate-700">{new Date(submittedApplication.created_at || Date.now()).toLocaleString()}</span>
           </div>
         </div>
 
@@ -429,6 +529,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                   <option value="Class 10">Class 10 (দশম শ্রেণি - SSC পরীক্ষার্থী)</option>
                   <option value="Class 11">Class 11 (একাদশ শ্রেণি - HSC ১ম বর্ষ)</option>
                   <option value="Class 12">Class 12 (দ্বাদশ শ্রেণি - HSC ২য় বর্ষ)</option>
+                  <option value="HSC Passed">HSC Passed (বিশ্ববিদ্যালয় / মেডিকেল ভর্তি পরীক্ষার্থী)</option>
                 </select>
               </div>
 
@@ -451,7 +552,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Account Password (পাসওয়ার্ড সেট করুন) <span className="text-red-500">*</span>
+                  Account Password (পাসওয়ার্ড সেট করুন) <span className="text-slate-400 font-normal">(ঐচ্ছিক / Optional)</span>
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -473,12 +574,12 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                   </button>
                 </div>
                 {formErrors.password && <p className="text-xs text-red-500 mt-1">{formErrors.password}</p>}
-                <p className="text-[10px] text-slate-400 mt-1">ভর্তির পর স্টুডেন্ট পোর্টালে লগইন করতে ব্যবহৃত হবে</p>
+                <p className="text-[10px] text-slate-400 mt-1">খালি রাখলে স্বয়ংক্রিয় সুরক্ষিত পাসওয়ার্ড তৈরি হবে</p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Confirm Password (পাসওয়ার্ড নিশ্চিত করুন) <span className="text-red-500">*</span>
+                  Confirm Password (পাসওয়ার্ড নিশ্চিত করুন)
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -505,23 +606,40 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
 
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Present Address <span className="text-red-500">*</span>
+                  Present Address (বর্তমান ঠিকানা) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="present_address"
                   value={formData.present_address}
                   onChange={handleChange}
-                  placeholder="House, Road, Area, Dhaka"
+                  placeholder="House, Road, Area, District (e.g. Bakalia, Chattogram)"
                   className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none"
                 />
                 {formErrors.present_address && <p className="text-xs text-red-500 mt-1">{formErrors.present_address}</p>}
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Permanent Address <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Permanent Address (স্থায়ী ঠিকানা)
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-brandBlue-700 hover:text-brandBlue-800">
+                    <input
+                      type="checkbox"
+                      checked={sameAddressAsPresent}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSameAddressAsPresent(checked);
+                        if (checked) {
+                          setFormData((prev) => ({ ...prev, permanent_address: prev.present_address }));
+                        }
+                      }}
+                      className="rounded border-slate-300 text-brandBlue-600 focus:ring-brandBlue-500 w-3.5 h-3.5"
+                    />
+                    <span>Same as Present Address (বর্তমান ঠিকানার অনুরূপ)</span>
+                  </label>
+                </div>
                 <input
                   type="text"
                   name="permanent_address"
@@ -610,9 +728,26 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Emergency Contact Number <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Emergency Contact Number (জরুরি যোগাযোগ)
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-brandBlue-700 hover:text-brandBlue-800">
+                    <input
+                      type="checkbox"
+                      checked={sameEmergencyAsGuardian}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSameEmergencyAsGuardian(checked);
+                        if (checked) {
+                          setFormData((prev) => ({ ...prev, emergency_contact: prev.guardian_phone }));
+                        }
+                      }}
+                      className="rounded border-slate-300 text-brandBlue-600 focus:ring-brandBlue-500 w-3.5 h-3.5"
+                    />
+                    <span>Same as Guardian Mobile (অভিভাবকের নম্বরের অনুরূপ)</span>
+                  </label>
+                </div>
                 <input
                   type="tel"
                   name="emergency_contact"
@@ -685,7 +820,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                   name="previous_school"
                   value={formData.previous_school}
                   onChange={handleChange}
-                  placeholder="e.g. Notre Dame College (SSC GPA 5.00)"
+                  placeholder="e.g. South Kanchana NA Chy High School (GPA 4.80)"
                   className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none"
                 />
                 {formErrors.previous_school && <p className="text-xs text-red-500 mt-1">{formErrors.previous_school}</p>}
@@ -693,13 +828,13 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Selected Course <span className="text-red-500">*</span>
+                  Selected Course (কোর্স) <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="selected_course_id"
                   value={formData.selected_course_id}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white font-medium"
                 >
                   {courses.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -711,13 +846,13 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Preferred Batch
+                  Preferred Batch (ব্যাচ)
                 </label>
                 <select
                   name="selected_batch_id"
                   value={formData.selected_batch_id}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none bg-white font-medium"
                 >
                   {filteredBatches.length > 0 ? (
                     filteredBatches.map((b) => (
@@ -756,7 +891,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                   name="additional_notes"
                   value={formData.additional_notes}
                   onChange={handleChange}
-                  placeholder="e.g. Applying for Golden GPA 5.0 scholarship"
+                  placeholder="e.g. Applying for merit scholarship"
                   className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brandBlue-500 focus:outline-none"
                 />
               </div>
@@ -783,7 +918,8 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                 <p><strong className="text-slate-500">Phone:</strong> {formData.phone}</p>
                 <p><strong className="text-slate-500">DOB:</strong> {formData.date_of_birth}</p>
                 <p><strong className="text-slate-500">Gender:</strong> {formData.gender}</p>
-                <p><strong className="text-slate-500">Address:</strong> {formData.present_address}</p>
+                <p><strong className="text-slate-500">Present Address:</strong> {formData.present_address}</p>
+                <p><strong className="text-slate-500">Permanent Address:</strong> {formData.permanent_address || formData.present_address}</p>
                 <p><strong className="text-slate-500">Portal Password:</strong> •••••••• (Secured)</p>
               </div>
 
@@ -793,8 +929,10 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
                 </span>
                 <p><strong className="text-slate-500">Guardian:</strong> {formData.guardian_name} ({formData.guardian_relationship})</p>
                 <p><strong className="text-slate-500">Guardian Phone:</strong> {formData.guardian_phone}</p>
+                <p><strong className="text-slate-500">Emergency Contact:</strong> {formData.emergency_contact || formData.guardian_phone}</p>
                 <p><strong className="text-slate-500">Class:</strong> {formData.current_class} ({formData.academic_group})</p>
                 <p><strong className="text-slate-500">Institution:</strong> {formData.previous_school}</p>
+                <p><strong className="text-slate-500">Program:</strong> {courses.find((c) => c.id === formData.selected_course_id)?.title_en || formData.selected_course_id}</p>
                 <p><strong className="text-slate-500">Learning Mode:</strong> <span className="uppercase font-bold text-brandBlue-600">{formData.learning_mode}</span></p>
               </div>
             </div>
@@ -851,7 +989,7 @@ export function AdmissionForm({ initialCourseId, initialBatchId }: AdmissionForm
               className="px-8 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-navy-950 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-md disabled:opacity-50"
             >
               {isSubmitting ? (
-                <span>Generating Reference...</span>
+                <span>Submitting Application...</span>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 text-navy-950" />
